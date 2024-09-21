@@ -9,7 +9,6 @@ export default Chart.withErrorBoundary(function AccountTradesChartView({address}
     const config = {
         plotOptions: {
             column: {
-                stacking: 'normal',
                 marker: {
                     enabled: false
                 },

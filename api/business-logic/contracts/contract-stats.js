@@ -17,6 +17,7 @@ async function queryContractStats(network, contractAddress) {
         throw errors.notFound('Contract was not found on the ledger. Check if you specified contract address correctly.')
 
     const res = {
+        contract: contract.address,
         account: contract.address,
         created: contract.created,
         creator: await resolveAccountAddress(network, contract.creator),

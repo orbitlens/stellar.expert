@@ -12,12 +12,16 @@ const {computeHash} = require('../../utils/sha256')
  * @param {String} basePath
  * @param {String} parentAddress
  * @param {String} cursor
+ * @param {String} durability
  * @param {Number} limit
  * @param {'asc'|'desc'} order
  * @return {Promise<MultiRows>}
  */
-async function queryContractData(network, basePath, parentAddress, {cursor, limit, order}) {
+async function queryContractData(network, basePath, parentAddress, {cursor, durability, limit, order}) {
     validateNetwork(network)
+    if (durability && !['instance', 'persistent', 'temporary'].includes(durability))
+        throw errors.validationError('durability', `Invalid durability: "${durability}".`)
+    const {_id: lastLedger} = await db[network].collection('ledgers').findOne({}, {sort: {_id: -1}, projection: {_id: 1}})
     const parentId = await fetchParentId(network, parentAddress)
     limit = normalizeLimit(limit)
 
@@ -27,6 +31,9 @@ async function queryContractData(network, basePath, parentAddress, {cursor, limi
             $gte: generateContractDataIdFilter(parentId),
             $lt: generateContractDataIdFilter(parentId + 1)
         }
+    }
+    if (durability) {
+        query.durability = durability
     }
     if (cursor) {
         const parsedCursor = parseCursor(cursor, parentId)
@@ -39,12 +46,15 @@ async function queryContractData(network, basePath, parentAddress, {cursor, limi
         .find(query)
         .sort({_id: parsedOrder})
         .limit(limit)
-        .project({_id: 1, key: 1, value: 1, updated: 1})
+        .project({_id: 1, key: 1, value: 1, durability: 1, ttl: 1, updated: 1})
         .toArray()
 
     for (const entry of dataEntries) {
         entry.paging_token = entry._id.buffer.toString('base64')
         delete entry._id
+        if (entry.ttl && entry.ttl < lastLedger) {
+            entry.expired = true
+        }
     }
 
     return preparePagedData(basePath, {cursor, limit, order: parsedOrder === 1 ? 'asc' : 'desc'}, dataEntries)
@@ -120,7 +130,7 @@ function generateContractDataId(contractId, key) {
 }
 
 function generateContractDataIdFilter(contractId) {
-    const id = Buffer.allocUnsafe(32)
+    const id = Buffer.allocUnsafe(36)
     id.fill(0)
     id.writeInt32BE(contractId)
     return id

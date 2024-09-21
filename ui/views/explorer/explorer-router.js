@@ -24,6 +24,7 @@ import AccountClaimableBalancesView from './claimable-balance/account-claimable-
 import ContractDataEntries from './contract/contract-data-entries-view'
 import ContractVersions from './contract/contract-versions-view'
 import StagedSorobanConfigChanges from './protocol/staged-soroban-config-changes-view'
+import SorobanTopContractsView from './ledger/soroban-top-contracts-view'
 
 function ExplorerRouter({match}) {
     const {path} = match
@@ -49,6 +50,7 @@ function ExplorerRouter({match}) {
             <Route path={`${path}/op/:id`} component={OpRedirect}/>
             <Route path={`${path}/`} exact component={ExplorerHomePageView}/>
             <Route path={`${path}/network-activity`} component={NetworkActivity}/>
+            <Route path={`${path}/top-contracts`} component={SorobanTopContractsView}/>
             <Route path={`${path}/payment-locator`}>
                 <Loadable moduleKey="payment-locator"
                     load={() => import(/* webpackChunkName: "payment-locator" */ './pages/payment-locator-page-view')}/>
